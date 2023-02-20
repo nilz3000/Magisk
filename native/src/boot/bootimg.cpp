@@ -433,7 +433,7 @@ void boot_img::parse_image(const uint8_t *addr, format_t type) {
             hdr->ramdisk_size() -= sizeof(mtk_hdr);
             r_fmt[0] = check_fmt_lg(ramdisk, hdr->ramdisk_size());
         }
-        for(int i = 0; i < hdr->vendor_ramdisk_table_entry_num(); ++i){
+        for(int i = 0; i < num_vendor_ramdisk_table_entries; ++i){
             std::string s("RAMDISK_FMT.");
             s.append(to_string(i));
             fprintf(stderr, "%-*s [%s]\n", PADDING, s.c_str(), fmt2name[r_fmt[i]]);
