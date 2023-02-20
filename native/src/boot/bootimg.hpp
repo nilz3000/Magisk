@@ -368,9 +368,11 @@ struct dyn_img_hdr {
     decl_var(dtb_size, 32)
 
     // v4 specific
+    decl_var(vendor_ramdisk_table_size, 32)
+    decl_var(vendor_ramdisk_table_entry_num, 32)
+    decl_val(vendor_ramdisk_table_entry_size, uint32_t)
+    decl_var(bootconfig_size, 32)
     decl_val(signature_size, uint32_t)
-    decl_val(vendor_ramdisk_table_size, uint32_t)
-    decl_val(bootconfig_size, uint32_t)
 
     virtual ~dyn_img_hdr() {
         free(raw);
@@ -533,6 +535,8 @@ struct dyn_img_vnd_v4 : public dyn_img_vnd_v3 {
     impl_cls(vnd_v4)
 
     impl_val(vendor_ramdisk_table_size)
+    impl_val(vendor_ramdisk_table_entry_num)
+    impl_val(vendor_ramdisk_table_entry_size)
     impl_val(bootconfig_size)
 };
 
@@ -573,7 +577,7 @@ struct boot_img {
 
     // The format of kernel, ramdisk and extra
     format_t k_fmt = UNKNOWN;
-    format_t r_fmt = UNKNOWN;
+    format_t *r_fmt;
     format_t e_fmt = UNKNOWN;
 
     /***************************************************
@@ -618,6 +622,12 @@ struct boot_img {
     uint8_t *extra;
     uint8_t *recovery_dtbo;
     uint8_t *dtb;
+    uint8_t *vendor_ramdisk_table;
+    uint8_t *bootconfig;
+
+    struct vendor_ramdisk_table_entry_v4 *vendor_ramdisk_table_entries;
+    // extra var needed to support all other images with single ramdisk
+    uint32_t num_vendor_ramdisk_table_entries;
 
     // Pointer to blocks defined in header, but we do not care
     uint8_t *ignore;
