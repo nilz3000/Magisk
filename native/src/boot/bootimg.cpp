@@ -302,7 +302,7 @@ if (hdr->name##_size()) {                                           \
     off += blk_sz;                                                  \
 }
 
-void boot_img::parse_image(uint8_t *addr, format_t type)__attribute__ ((optnone)) {
+void boot_img::parse_image(uint8_t *addr, format_t type) {
     hdr = create_hdr(addr, type);
 
     if (char *id = hdr->id()) {
