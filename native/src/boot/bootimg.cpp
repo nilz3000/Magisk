@@ -414,6 +414,7 @@ void boot_img::parse_image(const uint8_t *addr, format_t type) {
             auto &[entry, fmt] = ramdisk_table_entries.emplace_back(make_unique<vendor_ramdisk_table_entry_v4>(), UNKNOWN);
             entry->ramdisk_size = hdr->ramdisk_size();
             entry->ramdisk_offset = 0;
+            entry->ramdisk_name[0] = '\0';
             fmt = check_fmt_lg(ramdisk, size);
         }
         if (auto &[entry, fmt] = ramdisk_table_entries.front(); fmt == MTK) {
@@ -426,9 +427,10 @@ void boot_img::parse_image(const uint8_t *addr, format_t type) {
             hdr->ramdisk_size() -= sizeof(mtk_hdr);
             fmt = check_fmt_lg(ramdisk, hdr->ramdisk_size());
         }
-        for (size_t i = 0; const auto&[entry, fmt]: ramdisk_table_entries) {
-            char s[20] = {};
-            ssprintf(s, sizeof(s), "RAMDISK_FMT.%d", i++);
+        for (const auto&[entry, fmt]: ramdisk_table_entries) {
+            char s[45] = {"RAMDISK_FMT"};
+            if (entry->ramdisk_name[0] != '\0')
+                ssprintf(s, sizeof(s), "RAMDISK_FMT_%.*s", VENDOR_RAMDISK_NAME_SIZE, entry->ramdisk_name);
             fprintf(stderr, "%-*s [%s]\n", PADDING, s, fmt2name[fmt]);
         }
     }
