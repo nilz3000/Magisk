@@ -383,21 +383,19 @@ void boot_img::parse_image(uint8_t *addr, format_t type) {
     if (auto size = hdr->ramdisk_size()) {
         if (hdr->is_vendor && hdr->header_version() >= 4) {
             for (int i = 0; i < hdr->vendor_ramdisk_table_entry_num(); ++i) {
-                auto entry = make_pair(make_shared<struct vendor_ramdisk_table_entry_v4>(), UNKNOWN);
-                memcpy(entry.first.get(),
+                auto &[entry, fmt] = ramdisk_table_entries.emplace_back(make_unique<vendor_ramdisk_table_entry_v4>(), UNKNOWN);
+                memcpy(entry.get(),
                        vendor_ramdisk_table + (i * hdr->vendor_ramdisk_table_entry_size()),
                        hdr->vendor_ramdisk_table_entry_size());
-                entry.second = check_fmt_lg(ramdisk + entry.first->ramdisk_offset, entry.first->ramdisk_size);
-                ramdisk_table_entries.push_back(entry);
+                fmt = check_fmt_lg(ramdisk + entry->ramdisk_offset, entry->ramdisk_size);
             }
         } else {
-            auto entry = make_pair(make_shared<struct vendor_ramdisk_table_entry_v4>(), UNKNOWN);
-            entry.first->ramdisk_size = hdr->ramdisk_size();
-            entry.first->ramdisk_offset = 0;
-            entry.second = check_fmt_lg(ramdisk, size);
-            ramdisk_table_entries.push_back(entry);
+            auto &[entry, fmt] = ramdisk_table_entries.emplace_back(make_unique<vendor_ramdisk_table_entry_v4>(), UNKNOWN);
+            entry->ramdisk_size = hdr->ramdisk_size();
+            entry->ramdisk_offset = 0;
+            fmt = check_fmt_lg(ramdisk, size);
         }
-        if (ramdisk_table_entries.front().second == MTK) {
+        if (auto &[entry, fmt] = ramdisk_table_entries.front(); fmt == MTK) {
             fprintf(stderr, "MTK_RAMDISK_HDR\n");
             flags[MTK_RAMDISK] = true;
             r_hdr = reinterpret_cast<mtk_hdr *>(ramdisk);
@@ -405,12 +403,12 @@ void boot_img::parse_image(uint8_t *addr, format_t type) {
             fprintf(stderr, "%-*s [%s]\n", PADDING, "NAME", r_hdr->name);
             ramdisk += sizeof(mtk_hdr);
             hdr->ramdisk_size() -= sizeof(mtk_hdr);
-            ramdisk_table_entries.front().second = check_fmt_lg(ramdisk, hdr->ramdisk_size());
+            fmt = check_fmt_lg(ramdisk, hdr->ramdisk_size());
         }
-        for (int i = 0; i < ramdisk_table_entries.size(); ++i) {
+        for (size_t i = 0; const auto&[entry, fmt]: ramdisk_table_entries) {
             char s[20] = {};
-            ssprintf(s, sizeof(s), "RAMDISK_FMT.%d", i);
-            fprintf(stderr, "%-*s [%s]\n", PADDING, s, fmt2name[ramdisk_table_entries.at(i).second]);
+            ssprintf(s, sizeof(s), "RAMDISK_FMT.%d", i++);
+            fprintf(stderr, "%-*s [%s]\n", PADDING, s, fmt2name[fmt]);
         }
     }
     if (!hdr->is_vendor && hdr->ramdisk_size() == 0 && hdr->header_version() == 4) {
@@ -418,8 +416,7 @@ void boot_img::parse_image(uint8_t *addr, format_t type) {
         // the CPIO from scratch. However, since this ramdisk will have to be merged
         // with other vendor ramdisks, it has to use the exact same compression method.
         // v4 GKIs are required to use lz4 (legacy), so hardcode it here.
-        auto entry = make_pair(make_shared<struct vendor_ramdisk_table_entry_v4>(), LZ4_LEGACY);
-        ramdisk_table_entries.push_back(entry);
+        ramdisk_table_entries.emplace_back(make_pair(make_unique<vendor_ramdisk_table_entry_v4>(), LZ4_LEGACY));
     }
     if (auto size = hdr->extra_size()) {
         e_fmt = check_fmt_lg(extra, size);
@@ -495,22 +492,22 @@ int unpack(const char *image, bool skip_decomp, bool hdr) {
     dump(boot.kernel_dtb, boot.hdr->kernel_dt_size, KER_DTB_FILE);
 
     // Dump ramdisk
-    for (int i = 0; i < boot.ramdisk_table_entries.size(); ++i) {
+    for (size_t i = 0; const auto& [entry, fmt]: boot.ramdisk_table_entries) {
         // change file name only for vendor_boot v4 to keep backwards compatibility with scripts etc.
         char file_name[PATH_MAX] = {RAMDISK_FILE};
-        if (boot.hdr->header_version() == 4 && boot.hdr->is_vendor)
-            ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, i);
+        if (boot.hdr->header_version() == 4 && boot.hdr->is_vendor) {
+            ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, i++);
+        }
 
-        auto entry = boot.ramdisk_table_entries.at(i);
-        if (!skip_decomp && COMPRESSED(entry.second)) {
+        if (!skip_decomp && COMPRESSED(fmt)) {
             int fd = creat(file_name, 0644);
-            decompress(entry.second,
+            decompress(fmt,
                        fd,
-                       boot.ramdisk + entry.first->ramdisk_offset,
-                       entry.first->ramdisk_size);
+                       boot.ramdisk + entry->ramdisk_offset,
+                       entry->ramdisk_size);
             close(fd);
         } else {
-            dump(boot.ramdisk + entry.first->ramdisk_offset, entry.first->ramdisk_size, file_name);
+            dump(boot.ramdisk + entry->ramdisk_offset, entry->ramdisk_size, file_name);
         }
     }
 
@@ -649,7 +646,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     file_align();
 
     // ramdisk
-    for (int i = 0; i < boot.ramdisk_table_entries.size(); ++i) {
+    for (size_t i = 0; const auto &[entry, fmt] : boot.ramdisk_table_entries) {
         off.ramdisk = lseek(fd, 0, SEEK_CUR);
         if (boot.flags[MTK_RAMDISK]) {
             // Copy MTK headers
@@ -658,19 +655,18 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
 
         char file_name[PATH_MAX] = {RAMDISK_FILE};
         if (boot.hdr->header_version() == 4 && boot.hdr->is_vendor)
-            ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, i);
+            ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, i++);
 
-        auto entry = boot.ramdisk_table_entries.at(i);
         if (access(file_name, R_OK) == 0) {
             auto m = mmap_data(file_name);
             uint32_t size = 0;
-            if (!skip_comp && !COMPRESSED_ANY(check_fmt(m.buf, m.sz)) && COMPRESSED(entry.second)) {
-                size = compress(entry.second, fd, m.buf, m.sz);
+            if (!skip_comp && !COMPRESSED_ANY(check_fmt(m.buf, m.sz)) && COMPRESSED(fmt)) {
+                size = compress(fmt, fd, m.buf, m.sz);
             } else {
                 size = xwrite(fd, m.buf, m.sz);
             }
-            entry.first->ramdisk_size = size;
-            entry.first->ramdisk_offset = hdr->ramdisk_size();
+            entry->ramdisk_size = size;
+            entry->ramdisk_offset = hdr->ramdisk_size();
             hdr->ramdisk_size() += size;
         }
     }
@@ -711,8 +707,8 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
 
     off.vendor_ramdisk_table = lseek(fd, 0, SEEK_CUR);
     if (hdr->is_vendor && hdr->header_version() >= 4) {
-        for (auto entry : boot.ramdisk_table_entries) {
-            hdr->vendor_ramdisk_table_size() += xwrite(fd, entry.first.get(), hdr->vendor_ramdisk_table_entry_size());
+        for (const auto &[entry, fmt] : boot.ramdisk_table_entries) {
+            hdr->vendor_ramdisk_table_size() += xwrite(fd, entry.get(), hdr->vendor_ramdisk_table_entry_size());
         }
         file_align();
     }
