@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <utility>
 #include <bitset>
+#include <memory>
 #include "format.hpp"
 
 /******************
@@ -577,7 +578,6 @@ struct boot_img {
 
     // The format of kernel, ramdisk and extra
     format_t k_fmt = UNKNOWN;
-    format_t *r_fmt;
     format_t e_fmt = UNKNOWN;
 
     /***************************************************
@@ -625,9 +625,9 @@ struct boot_img {
     uint8_t *vendor_ramdisk_table;
     uint8_t *bootconfig;
 
-    struct vendor_ramdisk_table_entry_v4 *vendor_ramdisk_table_entries;
-    // extra var needed to support all other images with single ramdisk
-    uint32_t num_vendor_ramdisk_table_entries;
+    std::vector<std::pair<std::shared_ptr<struct vendor_ramdisk_table_entry_v4>, format_t>> ramdisk_table_entries;
+    // extra var needed, because vendor_ramdisk_table_entry_num isn't always available
+    uint32_t num_ramdisk_table_entries;
 
     // Pointer to blocks defined in header, but we do not care
     uint8_t *ignore;
