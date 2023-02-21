@@ -517,7 +517,7 @@ int unpack(const char *image, bool skip_decomp, bool hdr) {
         // change file name only for vendor_boot v4 to keep backwards compatibility with scripts etc.
         char file_name[PATH_MAX] = {RAMDISK_FILE};
         if (boot.hdr->header_version() == 4 && boot.hdr->is_vendor) {
-            ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, entry->ramdisk_name);
+            ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, VENDOR_RAMDISK_NAME_SIZE, entry->ramdisk_name);
         }
 
         if (!skip_decomp && COMPRESSED(fmt)) {
@@ -676,7 +676,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
 
         char file_name[PATH_MAX] = {RAMDISK_FILE};
         if (boot.hdr->header_version() == 4 && boot.hdr->is_vendor)
-            ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, entry->ramdisk_name);
+            ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, VENDOR_RAMDISK_NAME_SIZE, entry->ramdisk_name);
 
         if (access(file_name, R_OK) == 0) {
             auto m = mmap_data(file_name);
