@@ -382,6 +382,7 @@ void boot_img::parse_image(uint8_t *addr, format_t type) {
         }
         fprintf(stderr, "%-*s [%s]\n", PADDING, "KERNEL_FMT", fmt2name[k_fmt]);
     }
+
     if (auto size = hdr->ramdisk_size()) {
         if (hdr->is_vendor && hdr->header_version() >= 4) {
             // v4 vendor boot contains multiple ramdisks
@@ -423,6 +424,7 @@ void boot_img::parse_image(uint8_t *addr, format_t type) {
         // the CPIO from scratch. However, since this ramdisk will have to be merged
         // with other vendor ramdisks, it has to use the exact same compression method.
         // v4 GKIs are required to use lz4 (legacy), so hardcode it here.
+        num_vendor_ramdisk_table_entries = 1;
         r_fmt[0] = LZ4_LEGACY;
     }
     if (auto size = hdr->extra_size()) {
