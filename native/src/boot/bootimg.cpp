@@ -403,6 +403,7 @@ void boot_img::parse_image(const uint8_t *addr, format_t type) {
         }
         fprintf(stderr, "%-*s [%s]\n", PADDING, "KERNEL_FMT", fmt2name[k_fmt]);
     }
+
     if (auto size = hdr->ramdisk_size()) {
         if (hdr->is_vendor && hdr->header_version() >= 4) {
             // v4 vendor boot contains multiple ramdisks
