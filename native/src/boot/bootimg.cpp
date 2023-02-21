@@ -403,8 +403,7 @@ void boot_img::parse_image(const uint8_t *addr, format_t type) {
 
     if (auto size = hdr->ramdisk_size()) {
         if (hdr->is_vendor && hdr->header_version() >= 4) {
-            num_ramdisk_table_entries = hdr->vendor_ramdisk_table_entry_num();
-            for (int i = 0; i < num_ramdisk_table_entries; ++i) {
+            for (int i = 0; i < hdr->vendor_ramdisk_table_entry_num(); ++i) {
                 auto entry = make_pair(make_shared<struct vendor_ramdisk_table_entry_v4>(), UNKNOWN);
                 memcpy(entry.first.get(),
                        vendor_ramdisk_table + (i * hdr->vendor_ramdisk_table_entry_size()),
@@ -413,7 +412,6 @@ void boot_img::parse_image(const uint8_t *addr, format_t type) {
                 ramdisk_table_entries.push_back(entry);
             }
         } else {
-            num_ramdisk_table_entries = 1;
             auto entry = make_pair(make_shared<struct vendor_ramdisk_table_entry_v4>(), UNKNOWN);
             entry.first->ramdisk_size = hdr->ramdisk_size();
             entry.first->ramdisk_offset = 0;
@@ -430,11 +428,19 @@ void boot_img::parse_image(const uint8_t *addr, format_t type) {
             hdr->ramdisk_size() -= sizeof(mtk_hdr);
             ramdisk_table_entries.front().second = check_fmt_lg(ramdisk, hdr->ramdisk_size());
         }
-        for (int i = 0; i < num_ramdisk_table_entries; ++i) {
+        for (int i = 0; i < ramdisk_table_entries.size(); ++i) {
             char s[20] = {};
             ssprintf(s, sizeof(s), "RAMDISK_FMT.%d", i);
             fprintf(stderr, "%-*s [%s]\n", PADDING, s, fmt2name[ramdisk_table_entries.at(i).second]);
         }
+    }
+    if (!hdr->is_vendor && hdr->ramdisk_size() == 0 && hdr->header_version() == 4) {
+        // When a v4 boot image does not contain ramdisk, we will have to create
+        // the CPIO from scratch. However, since this ramdisk will have to be merged
+        // with other vendor ramdisks, it has to use the exact same compression method.
+        // v4 GKIs are required to use lz4 (legacy), so hardcode it here.
+        auto entry = make_pair(make_shared<struct vendor_ramdisk_table_entry_v4>(), LZ4_LEGACY);
+        ramdisk_table_entries.push_back(entry);
     }
     if (auto size = hdr->extra_size()) {
         e_fmt = check_fmt_lg(extra, size);
@@ -510,7 +516,7 @@ int unpack(const char *image, bool skip_decomp, bool hdr) {
     dump(boot.kernel_dtb, boot.hdr->kernel_dt_size, KER_DTB_FILE);
 
     // Dump ramdisk
-    for (int i = 0; i < boot.num_ramdisk_table_entries; ++i) {
+    for (int i = 0; i < boot.ramdisk_table_entries.size(); ++i) {
         // change file name only for vendor_boot v4 to keep backwards compatibility with scripts etc.
         char file_name[PATH_MAX] = {RAMDISK_FILE};
         if (boot.hdr->header_version() == 4 && boot.hdr->is_vendor)
@@ -664,7 +670,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     file_align();
 
     // ramdisk
-    for (int i = 0; i < boot.num_ramdisk_table_entries; ++i) {
+    for (int i = 0; i < boot.ramdisk_table_entries.size(); ++i) {
         off.ramdisk = lseek(fd, 0, SEEK_CUR);
         if (boot.flags[MTK_RAMDISK]) {
             // Copy MTK headers

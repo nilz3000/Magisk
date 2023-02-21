@@ -627,8 +627,6 @@ struct boot_img {
     const uint8_t *bootconfig;
 
     std::vector<std::pair<std::shared_ptr<struct vendor_ramdisk_table_entry_v4>, format_t>> ramdisk_table_entries;
-    // extra var needed, because vendor_ramdisk_table_entry_num isn't always available
-    uint32_t num_ramdisk_table_entries;
 
     // Pointer to blocks defined in header, but we do not care
     const uint8_t *ignore;
