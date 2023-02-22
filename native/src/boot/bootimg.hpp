@@ -631,7 +631,7 @@ struct boot_img {
     uint8_t *ignore;
     size_t ignore_size = 0;
 
-    boot_img(const char *);
+    boot_img(const char *, bool);
     ~boot_img();
 
     void parse_image(uint8_t *addr, format_t type);

@@ -15,7 +15,7 @@
 #define BOOTCONFIG_FILE     "bootconfig"
 #define NEW_BOOT            "new-boot.img"
 
-int unpack(const char *image, bool skip_decomp = false, bool hdr = false);
+int unpack(const char *image, bool skip_decomp = false, bool hdr = false, bool vendor = false);
 void repack(const char *src_img, const char *out_img, bool skip_comp = false);
 int split_image_dtb(const char *filename);
 int hexpatch(const char *file, const char *from, const char *to);

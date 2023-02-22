@@ -149,7 +149,7 @@ void dyn_img_hdr::load_hdr_file() {
     });
 }
 
-boot_img::boot_img(const char *image) : map(image) {
+boot_img::boot_img(const char *image, bool accept_vendor) : map(image) {
     fprintf(stderr, "Parsing boot image: [%s]\n", image);
     for (uint8_t *addr = map.buf; addr < map.buf + map.sz; ++addr) {
         format_t fmt = check_fmt(addr, map.sz);
@@ -170,8 +170,9 @@ boot_img::boot_img(const char *image) : map(image) {
             fprintf(stderr, "TEGRA_BLOB\n");
             addr += sizeof(blob_hdr) - 1;
             break;
-        case AOSP:
         case AOSP_VENDOR:
+            if (!accept_vendor) exit(1);
+        case AOSP:
             parse_image(addr, fmt);
             return;
         default:
@@ -418,7 +419,7 @@ void boot_img::parse_image(uint8_t *addr, format_t type) {
         // the CPIO from scratch. However, since this ramdisk will have to be merged
         // with other vendor ramdisks, it has to use the exact same compression method.
         // v4 GKIs are required to use lz4 (legacy), so hardcode it here.
-        ramdisk_table_entries.emplace_back(make_pair(make_unique<vendor_ramdisk_table_entry_v4>(), LZ4_LEGACY));
+        ramdisk_table_entries.emplace_back(make_tuple(make_unique<vendor_ramdisk_table_entry_v4>(), LZ4_LEGACY));
     }
     if (auto size = hdr->extra_size()) {
         e_fmt = check_fmt_lg(extra, size);
@@ -473,8 +474,8 @@ int split_image_dtb(const char *filename) {
     }
 }
 
-int unpack(const char *image, bool skip_decomp, bool hdr) {
-    boot_img boot(image);
+int unpack(const char *image, bool skip_decomp, bool hdr, bool vendor) {
+    boot_img boot(image, vendor);
 
     if (hdr)
         boot.hdr->dump_hdr_file();
@@ -545,7 +546,7 @@ write_zero(fd, align_padding(lseek(fd, 0, SEEK_CUR) - off.header, page_size))
 #define file_align() file_align_with(boot.hdr->page_size())
 
 void repack(const char *src_img, const char *out_img, bool skip_comp) {
-    const boot_img boot(src_img);
+    const boot_img boot(src_img, true);
     fprintf(stderr, "Repack to boot image: [%s]\n", out_img);
 
     struct {
