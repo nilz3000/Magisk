@@ -12,6 +12,7 @@
 #define RAMDISK_FILE        "ramdisk.cpio"
 #define VENDOR_RAMDISK_FILE "vendor_ramdisk_%.*s.cpio"
 #define BOOTCONFIG_FILE     "bootconfig"
+#define RAMDISK_TABLE_FILE  "ramdisk_table"
 #define NEW_BOOT            "new-boot.img"
 
 int unpack(const char *image, bool skip_decomp = false, bool hdr = false, bool vendor = false);

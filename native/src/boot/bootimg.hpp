@@ -110,6 +110,13 @@ struct AvbVBMetaImageHeader {
 #define VENDOR_RAMDISK_NAME_SIZE 32
 #define VENDOR_RAMDISK_TABLE_ENTRY_BOARD_ID_SIZE 16
 
+enum ramdisk_type {
+    VENDOR_RAMDISK_TYPE_NONE
+    VENDOR_RAMDISK_TYPE_PLATFORM
+    VENDOR_RAMDISK_TYPE_RECOVERY
+    VENDOR_RAMDISK_TYPE_DLKM
+};
+
 /* When the boot image header has a version of 0 - 2, the structure of the boot
  * image is as follows:
  *

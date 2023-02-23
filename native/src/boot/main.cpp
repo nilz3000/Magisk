@@ -174,14 +174,16 @@ int main(int argc, char *argv[]) {
             if (argv[idx][0] != '-')
                 break;
             for (char *flag = &argv[idx][1]; *flag; ++flag) {
-                if (*flag == 'n')
+                if (*flag == 'n') {
                     nodecomp = true;
-                else if (*flag == 'h')
+                } else if (*flag == 'h') {
                     hdr = true;
-                else if (flag == "-vendor"sv)
+                } else if (flag == "-vendor"sv) {
                     vendor = true;
-                else
+                    break;
+                } else {
                     usage(argv[0]);
+                }
             }
             ++idx;
         }
