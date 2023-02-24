@@ -14,6 +14,7 @@ public:
     bool name_exist(const char *name);
     size_t get_table_length();
     std::unique_ptr<struct vendor_ramdisk_table_entry_v4> &get_table_entry(unsigned int idx);
+    std::vector<std::unique_ptr<struct vendor_ramdisk_table_entry_v4>> &get_table();
 
 protected:
     std::vector<std::unique_ptr<struct vendor_ramdisk_table_entry_v4>> entries;

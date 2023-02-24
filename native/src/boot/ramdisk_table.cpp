@@ -1,6 +1,6 @@
-#include <cstring>
-#include <limits.h>
 #include <sys/stat.h>
+#include <cstring>
+#include <climits>
 
 #include <base.hpp>
 
@@ -105,6 +105,10 @@ std::unique_ptr<struct vendor_ramdisk_table_entry_v4> &ramdisk_table::get_table_
     return entries.at(idx);
 }
 
+std::vector<std::unique_ptr<struct vendor_ramdisk_table_entry_v4>> &ramdisk_table::get_table() {
+    return entries;
+}
+
 int ramdisk_table_commands(int argc, char *argv[]) {
     char *in_table = argv[0];
     ++argv;
@@ -115,7 +119,7 @@ int ramdisk_table_commands(int argc, char *argv[]) {
     table.print();
 
     int cmdc;
-    char *cmdv[10];
+    char *cmdv[55];
 
     for (int i = 0; i < argc; ++i) {
         // Reset
@@ -151,20 +155,19 @@ int ramdisk_table_commands(int argc, char *argv[]) {
             char *name = nullptr;
             uint32_t id[VENDOR_RAMDISK_TABLE_ENTRY_BOARD_ID_SIZE];
             memset(id, 0, 4 * VENDOR_RAMDISK_TABLE_ENTRY_BOARD_ID_SIZE);
-            for (int i = 1; i < argc - 1; i += 2) {
-                if (cmdv[i] == "--type"sv && i + 1 < argc) {
-                    if (argv[i + 1] == "none"sv)
+            for (int i = 1; i < cmdc; i += 2) {
+                if (cmdv[i] == "--type"sv && i + 1 < cmdc) {
+                    if (cmdv[i + 1] == "none"sv)
                         type = VENDOR_RAMDISK_TYPE_NONE;
-                    else if (argv[i + 1] == "dlkm"sv)
+                    else if (cmdv[i + 1] == "dlkm"sv)
                         type = VENDOR_RAMDISK_TYPE_DLKM;
-                    else if (argv[i + 1] == "platform"sv)
+                    else if (cmdv[i + 1] == "platform"sv)
                         type = VENDOR_RAMDISK_TYPE_PLATFORM;
-                    else if (argv[i + 1] == "recovery"sv)
+                    else if (cmdv[i + 1] == "recovery"sv)
                         type = VENDOR_RAMDISK_TYPE_RECOVERY;
                     else
                         return 1;
-                    continue;
-                } else if (cmdv[i] == "--name"sv && i + 1 < argc) {
+                } else if (cmdv[i] == "--name"sv && i + 1 < cmdc) {
                     if (strlen(cmdv[i + 1]) > 32) {
                         fprintf(stderr, "Name is to long. Maximal length is 32 characters.\n");
                         return 1;
@@ -176,31 +179,36 @@ int ramdisk_table_commands(int argc, char *argv[]) {
                                 cmdv[i + 1]);
                         exit(1);
                     }
-                    name = argv[i + 1];
-                    continue;
-                } else if (cmdv[i] == "--copy-id"sv && i + 1 < argc) {
+                    char file_name[PATH_MAX];
+                    ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, VENDOR_RAMDISK_NAME_SIZE, cmdv[i + 1]);
+                    if (access(file_name, R_OK)) {
+                        fprintf(stderr, "Ramdisk file %s doesn't exist.\n", cmdv[i + 1]);
+                        exit(1);
+                    }
+                    name = cmdv[i + 1];
+                } else if (cmdv[i] == "--copy-id"sv && i + 1 < cmdc) {
                     char *endptr = nullptr;
-                    uint64_t id_idx = strtoul(argv[i + 1], &endptr, 10);
-                    if (endptr == argv[i + 1] || id_idx >= table.get_table_length())
-                        fprintf(stderr, "Entry %s not available.\n", argv[i + 1]);
-                    else
+                    uint64_t id_idx = strtoul(cmdv[i + 1], &endptr, 10);
+                    if (endptr == cmdv[i + 1] || id_idx >= table.get_table_length()) {
+                        fprintf(stderr, "Entry %s not available.\n", cmdv[i + 1]);
+                        return 1;
+                    } else {
                         memcpy(id, table.get_table_entry(id_idx)->board_id, sizeof(id));
-                    continue;
-                } else if (cmdv[i] == "--id"sv && i + 2 < argc) {
+                    }
+                } else if (cmdv[i] == "--id"sv && i + 2 < cmdc) {
                     char *endptr = nullptr;
-                    uint64_t id_idx = strtoul(argv[i + 1], &endptr, 10);
-                    if (endptr == argv[i + 1]) {
+                    uint64_t id_idx = strtoul(cmdv[i + 1], &endptr, 10);
+                    if (endptr == cmdv[i + 1]) {
                         fprintf(stderr, "Id index has to be in range [0..15].\n");
                         return 1;
                     }
-                    uint64_t id_val = strtoul(argv[i + 2], &endptr, 16);
-                    if (endptr == argv[i + 2] || id_val != (uint32_t)id_val) {
+                    uint64_t id_val = strtoul(cmdv[i + 2], &endptr, 16);
+                    if (endptr == cmdv[i + 2] || id_val != (uint32_t)id_val) {
                         fprintf(stderr, "Id has to be a 32 bit hex value.\n");
                         return 1;
                     }
                     id[id_idx] = (uint32_t)id_val;
                     ++i;
-                    continue;
                 } else {
                     return 1;
                 }

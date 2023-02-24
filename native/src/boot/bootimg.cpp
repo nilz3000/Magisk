@@ -10,6 +10,7 @@
 #include "bootimg.hpp"
 #include "magiskboot.hpp"
 #include "compress.hpp"
+#include "ramdisk_table.hpp"
 
 using namespace std;
 
@@ -549,7 +550,7 @@ write_zero(fd, align_padding(lseek(fd, 0, SEEK_CUR) - off.header, page_size))
 #define file_align() file_align_with(boot.hdr->page_size())
 
 void repack(const char *src_img, const char *out_img, bool skip_comp) {
-    const boot_img boot(src_img, true);
+    boot_img boot(src_img, true);
     fprintf(stderr, "Repack to boot image: [%s]\n", out_img);
 
     struct {
@@ -579,7 +580,25 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     if (access(HEADER_FILE, R_OK) == 0)
         hdr->load_hdr_file();
 
-
+    if (boot.hdr->is_vendor && boot.hdr->header_version() == 4 && access(RAMDISK_TABLE_FILE, R_OK) == 0) {
+        ramdisk_table table;
+        table.load(RAMDISK_TABLE_FILE);
+        format_t fmt_first = std::get<1>(boot.ramdisk_table_entries.front());
+        for (int i = 0; i < table.get_table_length(); ++i) {
+            if (i < boot.ramdisk_table_entries.size()) {
+                auto &[entry, fmt] = boot.ramdisk_table_entries.at(i);
+                memcpy(entry.get(), table.get_table_entry(i).get(), sizeof(vendor_ramdisk_table_entry_v4));
+            } else {
+                auto &[entry, fmt] = boot.ramdisk_table_entries.emplace_back(make_unique<vendor_ramdisk_table_entry_v4>(), fmt_first);
+                memcpy(entry.get(), table.get_table_entry(i).get(), sizeof(vendor_ramdisk_table_entry_v4));
+            }
+        }
+        // remove entries if loaded table is shorter
+        int diff = boot.ramdisk_table_entries.size() - table.get_table_length();
+        for (int i = 0; i < diff; ++i)
+            boot.ramdisk_table_entries.pop_back();
+        hdr->vendor_ramdisk_table_entry_num() = boot.ramdisk_table_entries.size();
+    }
 
     /***************
      * Write blocks
@@ -716,9 +735,10 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     }
 
     off.vendor_ramdisk_table = lseek(fd, 0, SEEK_CUR);
+    hdr->vendor_ramdisk_table_size() = 0;
     if (hdr->is_vendor && hdr->header_version() >= 4) {
         for (const auto &[entry, fmt] : boot.ramdisk_table_entries) {
-            hdr->vendor_ramdisk_table_size() += xwrite(fd, entry.get(), hdr->vendor_ramdisk_table_entry_size());
+            hdr->vendor_ramdisk_table_size() += xwrite(fd, entry.get(), sizeof(vendor_ramdisk_table_entry_v4));
         }
         file_align();
     }

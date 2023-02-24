@@ -110,10 +110,14 @@ Supported actions:
         Removes table entry with name <name>, if present
       add --name <name> --type <type> [--id <0..15> <hex_val>] [--copy-id <entry>]
         Add new table entry with name <name> and type of <type>.
-        Possible types are 'none', 'dlkm', 'platform', 'recovery'.
+        A ramdisk file with name vendor_ramdisk_<name>.cpio
+        has to be present in the current working directory.
+        <name> has to be shorter than 32 characters.
+        Possible values for <type> are 'none', 'dlkm', 'platform', 'recovery'.
         By default the entire board id is set to zero.
         If --id <index> <hex_val> is specified, the board id
         at index <index> is set to 32 bit <hex_val>.
+        It can be specified up to 16 times with different indices.
         If --copy-id <entry> is specified, the entire board id of
         table entry with index <entry> is copied.
 
