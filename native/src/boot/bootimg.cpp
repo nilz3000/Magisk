@@ -670,8 +670,9 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     file_align();
 
     // ramdisk
+    off.ramdisk = lseek(fd, 0, SEEK_CUR);
+    hdr->ramdisk_size() = 0;
     for (const auto &[entry, fmt] : boot.ramdisk_table_entries) {
-        off.ramdisk = lseek(fd, 0, SEEK_CUR);
         if (boot.flags[MTK_RAMDISK]) {
             // Copy MTK headers
             xwrite(fd, boot.r_hdr, sizeof(mtk_hdr));
