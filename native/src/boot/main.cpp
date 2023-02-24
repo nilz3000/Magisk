@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
         ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, 2, "*");
         DIR *d = xopendir(".");
         while (struct dirent *dir = xreaddir(d)) {
-            if (dir->d_type && !fnmatch(file_name, dir->d_name, 0))
+            if (dir->d_type == DT_REG && !fnmatch(file_name, dir->d_name, 0))
                 unlink(dir->d_name);
         }
         closedir(d);
