@@ -100,6 +100,23 @@ Supported actions:
         Return values:
         0:valid    1:error
 
+  ramdisk-table <file> [commands...]
+    Do ramdisk-table commands to <file> (modifications are done in-place)
+    Each command is a single argument, add quotes for each command.
+    Supported commands:
+      print
+        Prints the table
+      rm --name <name>
+        Removes table entry with name <name>, if present
+      add --name <name> --type <type> [--id <0..15> <hex_val>] [--copy-id <entry>]
+        Add new table entry with name <name> and type of <type>.
+        Possible types are 'none', 'dlkm', 'platform', 'recovery'.
+        By default the entire board id is set to zero.
+        If --id <index> <hex_val> is specified, the board id
+        at index <index> is set to 32 bit <hex_val>.
+        If --copy-id <entry> is specified, the entire board id of
+        table entry with index <entry> is copied.
+
   split <file>
     Split image.*-dtb into kernel + kernel_dtb
 
@@ -131,6 +148,7 @@ Supported actions:
     print_formats();
 
     fprintf(stderr, "\n\n");
+
     exit(1);
 }
 
@@ -157,6 +175,7 @@ int main(int argc, char *argv[]) {
         unlink(RECV_DTBO_FILE);
         unlink(DTB_FILE);
         unlink(BOOTCONFIG_FILE);
+        unlink(RAMDISK_TABLE_FILE);
         char file_name[sizeof(VENDOR_RAMDISK_FILE)];
         ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, 2, "*");
         DIR *d = xopendir(".");

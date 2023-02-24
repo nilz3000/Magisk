@@ -7,11 +7,13 @@
 class ramdisk_table {
 public:
     void rm(const char *name);
-    void add(const char *name, ramdisk_type type, const uint32_t *id, int copy_id);
+    void add(const char *name, int type, const uint32_t *id);
     void dump(const char *file);
     void load(const char *file);
     void print();
     bool name_exist(const char *name);
+    size_t get_table_length();
+    std::unique_ptr<struct vendor_ramdisk_table_entry_v4> &get_table_entry(unsigned int idx);
 
 protected:
     std::vector<std::unique_ptr<struct vendor_ramdisk_table_entry_v4>> entries;
