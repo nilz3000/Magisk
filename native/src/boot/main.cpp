@@ -3,6 +3,7 @@
 
 #include "magiskboot.hpp"
 #include "compress.hpp"
+#include "ramdisk_table.hpp"
 
 using namespace std;
 
@@ -208,6 +209,9 @@ int main(int argc, char *argv[]) {
     } else if (argc > 3 && action == "dtb") {
         if (dtb_commands(argc - 2, argv + 2))
             usage(argv[0]);
+    } else if (argc > 3 && action == "ramdisk-table") {
+            if (ramdisk_table_commands(argc - 2, argv + 2))
+                usage(argv[0]);
     } else {
         usage(argv[0]);
     }

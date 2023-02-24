@@ -579,10 +579,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     if (access(HEADER_FILE, R_OK) == 0)
         hdr->load_hdr_file();
 
-    if (hdr->is_vendor && hdr->header_version() == 4 && access(HEADER_FILE, R_OK) == 0) {
 
-        boot.
-    }
 
     /***************
      * Write blocks
@@ -659,6 +656,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
 
     // ramdisk
     off.ramdisk = lseek(fd, 0, SEEK_CUR);
+    hdr->ramdisk_size() = 0;
     for (const auto &[entry, fmt] : boot.ramdisk_table_entries) {
         if (boot.flags[MTK_RAMDISK]) {
             // Copy MTK headers
