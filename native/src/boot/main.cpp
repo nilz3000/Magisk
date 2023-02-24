@@ -1,3 +1,5 @@
+#include <filesystem>
+#include <fnmatch.h>
 #include <mincrypt/sha.h>
 #include <base.hpp>
 
@@ -155,6 +157,13 @@ int main(int argc, char *argv[]) {
         unlink(EXTRA_FILE);
         unlink(RECV_DTBO_FILE);
         unlink(DTB_FILE);
+        unlink(BOOTCONFIG_FILE);
+        char file_name[sizeof(VENDOR_RAMDISK_FILE)] = {VENDOR_RAMDISK_FILE};
+        ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, VENDOR_RAMDISK_NAME_SIZE, "*");
+        for (auto entry : filesystem::directory_iterator(".")) {
+            if (entry.is_regular_file() && !fnmatch(file_name, entry.path().filename().c_str(), 0))
+                filesystem::remove(entry);
+        }
     } else if (argc > 2 && action == "sha1") {
         uint8_t sha1[SHA_DIGEST_SIZE];
         auto m = mmap_data(argv[2]);
