@@ -158,12 +158,11 @@ int main(int argc, char *argv[]) {
         unlink(BOOTCONFIG_FILE);
         char file_name[sizeof(VENDOR_RAMDISK_FILE)];
         ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, 2, "*");
-        DIR *d = xopendir(".");
-        while (struct dirent *dir = xreaddir(d)) {
+        sDIR d = xopen_dir(".");
+        while (struct dirent *dir = xreaddir(d.get())) {
             if (dir->d_type == DT_REG && !fnmatch(file_name, dir->d_name, 0))
                 unlink(dir->d_name);
         }
-        closedir(d);
     } else if (argc > 2 && action == "sha1") {
         uint8_t sha1[SHA_DIGEST_SIZE];
         auto m = mmap_data(argv[2]);
