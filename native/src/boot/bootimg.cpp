@@ -435,13 +435,6 @@ void boot_img::parse_image(const uint8_t *addr, format_t type) {
             fprintf(stderr, "%-*s [%s]\n", PADDING, s, fmt2name[fmt]);
         }
     }
-    if (!hdr->is_vendor && hdr->ramdisk_size() == 0 && hdr->header_version() == 4) {
-        // When a v4 boot image does not contain ramdisk, we will have to create
-        // the CPIO from scratch. However, since this ramdisk will have to be merged
-        // with other vendor ramdisks, it has to use the exact same compression method.
-        // v4 GKIs are required to use lz4 (legacy), so hardcode it here.
-        ramdisk_table_entries.emplace_back(make_tuple(make_unique<vendor_ramdisk_table_entry_v4>(), LZ4_LEGACY));
-    }
     if (auto size = hdr->extra_size()) {
         e_fmt = check_fmt_lg(extra, size);
         fprintf(stderr, "%-*s [%s]\n", PADDING, "EXTRA_FMT", fmt2name[e_fmt]);
@@ -593,6 +586,14 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     hdr->bootconfig_size() = 0;
     hdr->vendor_ramdisk_table_size() = 0;
 
+    std::vector<std::tuple<std::unique_ptr<vendor_ramdisk_table_entry_v4>, format_t>> new_ramdisk_table_entries;
+    for (const auto &[entry, fmt] : boot.ramdisk_table_entries) {
+        auto &[new_entry, new_fmt] = new_ramdisk_table_entries.emplace_back(make_unique<vendor_ramdisk_table_entry_v4>(), fmt);
+        memcpy(new_entry.get(),
+               entry.get(),
+               hdr->vendor_ramdisk_table_entry_size());
+    }
+
     if (access(HEADER_FILE, R_OK) == 0)
         hdr->load_hdr_file();
 
@@ -672,7 +673,11 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     // ramdisk
     off.ramdisk = lseek(fd, 0, SEEK_CUR);
     hdr->ramdisk_size() = 0;
-    for (const auto &[entry, fmt] : boot.ramdisk_table_entries) {
+
+    if (!hdr->is_vendor && hdr->header_version() == 4 && boot.ramdisk_table_entries.empty() && access(RAMDISK_FILE, R_OK) == 0)
+        new_ramdisk_table_entries.emplace_back(make_unique<vendor_ramdisk_table_entry_v4>(), LZ4_LEGACY);
+
+    for (const auto &[entry, fmt] : new_ramdisk_table_entries) {
         if (boot.flags[MTK_RAMDISK]) {
             // Copy MTK headers
             xwrite(fd, boot.r_hdr, sizeof(mtk_hdr));
@@ -740,7 +745,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
 
     off.vendor_ramdisk_table = lseek(fd, 0, SEEK_CUR);
     if (hdr->is_vendor && hdr->header_version() >= 4) {
-        for (const auto &[entry, fmt] : boot.ramdisk_table_entries) {
+        for (const auto &[entry, fmt] : new_ramdisk_table_entries) {
             hdr->vendor_ramdisk_table_size() += xwrite(fd, entry.get(), hdr->vendor_ramdisk_table_entry_size());
         }
         file_align();
