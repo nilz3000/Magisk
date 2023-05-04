@@ -9,6 +9,9 @@ version=string
 # Output path. Default: out
 outdir=string
 
+# Disable vendor boot check in magiskboot. Default: false
+skipVendorCheck=bool
+
 #####################################################
 # Signing configs for signing zips and APKs
 # These 4 variables has to be either all set or not

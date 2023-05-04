@@ -10,6 +10,7 @@
 #include "bootimg.hpp"
 #include "magiskboot.hpp"
 #include "compress.hpp"
+#include "flags.h"
 
 using namespace std;
 
@@ -171,7 +172,9 @@ boot_img::boot_img(const char *image, bool accept_vendor) : map(image) {
             addr += sizeof(blob_hdr) - 1;
             break;
         case AOSP_VENDOR:
+#ifndef MAGISK_SKIP_VENDOR_CHECK 
             if (!accept_vendor) exit(1);
+#endif // MAGISK_SKIP_VENDOR_CHECK
         case AOSP:
             parse_image(addr, fmt);
             return;

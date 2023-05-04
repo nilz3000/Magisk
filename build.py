@@ -170,6 +170,7 @@ def load_config(args):
     # Default values
     config['version'] = commit_hash
     config['outdir'] = 'out'
+    config['skipVendorCheck'] = False
 
     # Load prop files
     if op.exists(args.config):
@@ -178,6 +179,11 @@ def load_config(args):
     for key, value in parse_props('gradle.properties').items():
         if key.startswith('magisk.'):
             config[key[7:]] = value
+
+    if isinstance(config['skipVendorCheck'], str) and config['skipVendorCheck'].lower() in ['true', '1', 'y', 'yes']:
+        config['skipVendorCheck'] = True
+    else:
+        config['skipVendorCheck'] = False
 
     try:
         config['versionCode'] = int(config['versionCode'])
@@ -334,6 +340,8 @@ def dump_flag_header():
     flag_txt += f'#define MAGISK_VERSION      "{config["version"]}"\n'
     flag_txt += f'#define MAGISK_VER_CODE     {config["versionCode"]}\n'
     flag_txt += f'#define MAGISK_DEBUG        {0 if args.release else 1}\n'
+    if config["skipVendorCheck"]:
+        flag_txt += '#define MAGISK_SKIP_VENDOR_CHECK\n'
 
     mkdir_p(native_gen_path)
     write_if_diff(op.join(native_gen_path, 'flags.h'), flag_txt)
