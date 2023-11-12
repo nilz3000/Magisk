@@ -4,6 +4,7 @@
 #include "boot-rs.hpp"
 #include "magiskboot.hpp"
 #include "compress.hpp"
+#include "ramdisk_table.hpp"
 
 using namespace std;
 
@@ -78,6 +79,27 @@ Supported actions:
     Each command is a single argument; add quotes for each command.
     See "cpio --help" for supported commands.
 
+  ramdisk-table <file> [commands...]
+    Do ramdisk-table commands to <file> (modifications are done in-place)
+    Each command is a single argument, add quotes for each command.
+    Supported commands:
+      print
+        Prints the table
+      rm --name <name>
+        Removes table entry with name <name>, if present
+      add --name <name> --type <type> [--id <0..15> <hex_val>] [--copy-id <entry>]
+        Add new table entry with name <name> and type of <type>.
+        A ramdisk file with name vendor_ramdisk_<name>.cpio
+        has to be present in the current working directory.
+        <name> has to be shorter than 32 characters.
+        Possible values for <type> are 'none', 'dlkm', 'platform', 'recovery'.
+        By default the entire board id is set to zero.
+        If --id <index> <hex_val> is specified, the board id
+        at index <index> is set to 32 bit <hex_val>.
+        It can be specified up to 16 times with different indices.
+        If --copy-id <entry> is specified, the entire board id of
+        table entry with index <entry> is copied.
+
   dtb <file> <action> [args...]
     Do dtb related actions to <file>.
     See "dtb --help" for supported actions.
@@ -139,6 +161,7 @@ int main(int argc, char *argv[]) {
         unlink(RECV_DTBO_FILE);
         unlink(DTB_FILE);
         unlink(BOOTCONFIG_FILE);
+        unlink(RAMDISK_TABLE_FILE);
         char file_name[sizeof(VENDOR_RAMDISK_FILE)];
         ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, 2, "*");
         sDIR d = xopen_dir(".");
@@ -215,6 +238,9 @@ int main(int argc, char *argv[]) {
                 argc > 3 ? argv[3] : nullptr,
                 argc > 4 ? argv[4] : nullptr
                 ) ? 0 : 1;
+    } else if (argc > 3 && action == "ramdisk-table") {
+        if (ramdisk_table_commands(argc - 2, argv + 2))
+            usage(argv[0]);
     } else {
         usage(argv[0]);
     }
