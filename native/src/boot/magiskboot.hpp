@@ -13,6 +13,7 @@
 #define RECV_DTBO_FILE      "recovery_dtbo"
 #define DTB_FILE            "dtb"
 #define VENDOR_RAMDISK_FILE "vendor_ramdisk_%.*s.cpio"
+#define RAMDISK_TABLE_FILE  "ramdisk_table"
 #define BOOTCONFIG_FILE     "bootconfig"
 #define NEW_BOOT            "new-boot.img"
 

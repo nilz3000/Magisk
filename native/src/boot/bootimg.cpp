@@ -9,6 +9,7 @@
 #include "magiskboot.hpp"
 #include "compress.hpp"
 #include "flags.h"
+#include "ramdisk_table.hpp"
 
 using namespace std;
 
@@ -620,6 +621,9 @@ int unpack(const char *image, bool skip_decomp, bool hdr, bool vendor) {
     // Dump bootconfig
     dump(boot.bootconfig, boot.hdr->bootconfig_size(), BOOTCONFIG_FILE);
 
+    // Dump ramdisk_table
+    dump(boot.vendor_ramdisk_table, boot.hdr->vendor_ramdisk_table_size(), RAMDISK_TABLE_FILE);
+
     return boot.flags[CHROMEOS_FLAG] ? 2 : 0;
 }
 
@@ -656,11 +660,21 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     hdr->vendor_ramdisk_table_entry_num() = 0;
 
     std::vector<std::tuple<std::unique_ptr<vendor_ramdisk_table_entry_v4>, format_t>> new_ramdisk_table_entries;
-    for (const auto &[entry, fmt] : boot.ramdisk_table_entries) {
-        auto &[new_entry, new_fmt] = new_ramdisk_table_entries.emplace_back(make_unique<vendor_ramdisk_table_entry_v4>(), fmt);
-        memcpy(new_entry.get(),
-               entry.get(),
-               hdr->vendor_ramdisk_table_entry_size());
+    if (boot.hdr->is_vendor() && boot.hdr->header_version() == 4 && access(RAMDISK_TABLE_FILE, R_OK) == 0) {
+        ramdisk_table table;
+        table.load(RAMDISK_TABLE_FILE);
+        auto r_fmt = !boot.ramdisk_table_entries.empty() ? std::get<1>(boot.ramdisk_table_entries.front()) : LZ4_LEGACY;
+        for (const auto &entry : table.get_table()) {
+            auto &[new_entry, new_fmt] = new_ramdisk_table_entries.emplace_back(
+                    make_unique<vendor_ramdisk_table_entry_v4>(), r_fmt);
+            memcpy(new_entry.get(), entry.get(), hdr->vendor_ramdisk_table_entry_size());
+        }
+    } else {
+        for (const auto &[entry, fmt]: boot.ramdisk_table_entries) {
+            auto &[new_entry, new_fmt] = new_ramdisk_table_entries.emplace_back(
+                    make_unique<vendor_ramdisk_table_entry_v4>(), fmt);
+            memcpy(new_entry.get(), entry.get(), hdr->vendor_ramdisk_table_entry_size());
+        }
     }
 
     if (access(HEADER_FILE, R_OK) == 0)
@@ -809,6 +823,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
         file_align();
     }
 
+    // ramdisk_table
     off.vendor_ramdisk_table = lseek(fd, 0, SEEK_CUR);
     if (hdr->is_vendor() && hdr->header_version() >= 4) {
         for (const auto &[entry, fmt] : new_ramdisk_table_entries) {
@@ -818,6 +833,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
         file_align();
     }
 
+    // bootconfig
     off.bootconfig = lseek(fd, 0, SEEK_CUR);
     if (access(BOOTCONFIG_FILE, R_OK) == 0) {
         hdr->bootconfig_size() = restore(fd, BOOTCONFIG_FILE);
