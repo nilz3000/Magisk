@@ -104,6 +104,7 @@ LOCAL_SRC_FILES := \
     boot/bootimg.cpp \
     boot/compress.cpp \
     boot/format.cpp \
+    boot/ramdisk_table.cpp \
     boot/boot-rs.cpp
 
 LOCAL_LDFLAGS := -static

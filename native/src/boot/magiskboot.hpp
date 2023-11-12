@@ -4,17 +4,18 @@
 
 #include <base.hpp>
 
-#define HEADER_FILE     "header"
-#define KERNEL_FILE     "kernel"
-#define RAMDISK_FILE    "ramdisk.cpio"
-#define VND_RAMDISK_DIR "vendor_ramdisk"
-#define SECOND_FILE     "second"
-#define EXTRA_FILE      "extra"
-#define KER_DTB_FILE    "kernel_dtb"
-#define RECV_DTBO_FILE  "recovery_dtbo"
-#define DTB_FILE        "dtb"
-#define BOOTCONFIG_FILE "bootconfig"
-#define NEW_BOOT        "new-boot.img"
+#define HEADER_FILE         "header"
+#define KERNEL_FILE         "kernel"
+#define RAMDISK_FILE        "ramdisk.cpio"
+#define VND_RAMDISK_DIR     "vendor_ramdisk"
+#define SECOND_FILE         "second"
+#define EXTRA_FILE          "extra"
+#define KER_DTB_FILE        "kernel_dtb"
+#define RECV_DTBO_FILE      "recovery_dtbo"
+#define DTB_FILE            "dtb"
+#define BOOTCONFIG_FILE     "bootconfig"
+#define RAMDISK_TABLE_FILE  "ramdisk_table"
+#define NEW_BOOT            "new-boot.img"
 
 int unpack(const char *image, bool skip_decomp = false, bool hdr = false);
 void repack(const char *src_img, const char *out_img, bool skip_comp = false);

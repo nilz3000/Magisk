@@ -385,8 +385,8 @@ struct dyn_img_hdr {
     decl_val(signature_size, 32)
 
     // v4 vendor specific
-    decl_val(vendor_ramdisk_table_size, 32)
-    decl_val(vendor_ramdisk_table_entry_num, 32)
+    decl_var(vendor_ramdisk_table_size, 32)
+    decl_var(vendor_ramdisk_table_entry_num, 32)
     decl_val(vendor_ramdisk_table_entry_size, 32)
     decl_var(bootconfig_size, 32)
 
@@ -564,8 +564,8 @@ struct dyn_img_vnd_v3 : public dyn_img_hdr_vendor {
 struct dyn_img_vnd_v4 : public dyn_img_vnd_v3 {
     impl_cls(vnd_v4)
 
-    impl_val(vendor_ramdisk_table_size)
-    impl_val(vendor_ramdisk_table_entry_num)
+    impl_var(vendor_ramdisk_table_size)
+    impl_var(vendor_ramdisk_table_entry_num)
     impl_val(vendor_ramdisk_table_entry_size)
     impl_var(bootconfig_size)
 };

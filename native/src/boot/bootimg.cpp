@@ -9,6 +9,7 @@
 #include "bootimg.hpp"
 #include "magiskboot.hpp"
 #include "compress.hpp"
+#include "ramdisk_table.hpp"
 
 using namespace std;
 
@@ -638,6 +639,9 @@ int unpack(const char *image, bool skip_decomp, bool hdr) {
     // Dump bootconfig
     dump(boot.bootconfig, boot.hdr->bootconfig_size(), BOOTCONFIG_FILE);
 
+    // Dump ramdisk_table
+    dump(boot.vendor_ramdisk_table, boot.hdr->vendor_ramdisk_table_size(), RAMDISK_TABLE_FILE);
+
     return boot.flags[CHROMEOS_FLAG] ? 2 : 0;
 }
 
@@ -668,6 +672,8 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     hdr->second_size() = 0;
     hdr->dtb_size() = 0;
     hdr->bootconfig_size() = 0;
+    hdr->vendor_ramdisk_table_size() = 0;
+    hdr->vendor_ramdisk_table_entry_num() = 0;
 
     if (access(HEADER_FILE, R_OK) == 0)
         hdr->load_hdr_file();
@@ -757,10 +763,18 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
 
     if (boot.hdr->vendor_ramdisk_table_size()) {
         // Create a copy so we can modify it
-        auto entry_start = reinterpret_cast<const table_entry *>(boot.vendor_ramdisk_table);
-        ramdisk_table.insert(
+        if (access(RAMDISK_TABLE_FILE, R_OK) == 0) {
+            mmap_data table_file(RAMDISK_TABLE_FILE);
+            auto entry_start = reinterpret_cast<const table_entry *>(table_file.buf());
+            ramdisk_table.insert(
                 ramdisk_table.begin(),
                 entry_start, entry_start + boot.hdr->vendor_ramdisk_table_entry_num());
+        } else {
+            auto entry_start = reinterpret_cast<const table_entry *>(boot.vendor_ramdisk_table);
+            ramdisk_table.insert(
+                ramdisk_table.begin(),
+                entry_start, entry_start + boot.hdr->vendor_ramdisk_table_entry_num());
+        }
 
         owned_fd dirfd = xopen(VND_RAMDISK_DIR, O_RDONLY | O_CLOEXEC);
         uint32_t ramdisk_offset = 0;
@@ -781,8 +795,9 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
             }
             ramdisk_offset += it.ramdisk_size;
         }
-
+        hdr->vendor_ramdisk_table_entry_num() = ramdisk_table.size();
         hdr->ramdisk_size() = ramdisk_offset;
+
         file_align();
     } else if (access(RAMDISK_FILE, R_OK) == 0) {
         mmap_data m(RAMDISK_FILE);
@@ -843,7 +858,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
 
     // vendor ramdisk table
     if (!ramdisk_table.empty()) {
-        xwrite(fd, ramdisk_table.data(), sizeof(table_entry) * ramdisk_table.size());
+        hdr->vendor_ramdisk_table_size() = xwrite(fd, ramdisk_table.data(), sizeof(table_entry) * ramdisk_table.size());
         file_align();
     }
 
