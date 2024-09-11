@@ -27,7 +27,7 @@ void ramdisk_table::rm(const char *name) {
 
 void ramdisk_table::add(const char *name, int type, const uint32_t *id) {
     char file_name[PATH_MAX] = {};
-    ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, VENDOR_RAMDISK_NAME_SIZE, name);
+    ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, name);
 
     auto entry = make_unique<struct vendor_ramdisk_table_entry_v4>();
     memset(entry.get(), 0, sizeof(vendor_ramdisk_table_entry_v4));
@@ -180,7 +180,7 @@ int ramdisk_table_commands(int argc, char *argv[]) {
                         exit(1);
                     }
                     char file_name[PATH_MAX];
-                    ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, VENDOR_RAMDISK_NAME_SIZE, cmdv[i + 1]);
+                    ssprintf(file_name, sizeof(file_name), VENDOR_RAMDISK_FILE, cmdv[i + 1]);
                     if (access(file_name, R_OK)) {
                         fprintf(stderr, "Ramdisk file %s doesn't exist.\n", cmdv[i + 1]);
                         exit(1);

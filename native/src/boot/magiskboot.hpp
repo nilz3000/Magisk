@@ -16,6 +16,7 @@
 #define DTB_FILE        "dtb"
 #define NEW_BOOT        "new-boot.img"
 #define BOOTCONFIG_FILE "bootconfig"
+#define RAMDISK_TABLE_FILE "ramdisk_table"
 #define VENDOR_RAMDISK_FILE_PREFIX  "vendor_ramdisk_"
 #define VENDOR_RAMDISK_FILE_SUFFIX  ".cpio"
 #define VENDOR_RAMDISK_FILE         VENDOR_RAMDISK_FILE_PREFIX "%." str(VENDOR_RAMDISK_NAME_SIZE) "s" VENDOR_RAMDISK_FILE_SUFFIX

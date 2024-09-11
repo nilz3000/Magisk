@@ -1,6 +1,7 @@
 #include <bit>
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include <base.hpp>
 
@@ -677,7 +678,7 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
         table.load(RAMDISK_TABLE_FILE);
         auto r_fmt = !boot.ramdisk_table_entries.empty() ? std::get<1>(boot.ramdisk_table_entries.front()) : LZ4_LEGACY;
         for (const auto &entry : table.get_table()) {
-            new_ramdisk_table_entries.emplace_back(entry.get(), r_fmt);
+            new_ramdisk_table_entries.emplace_back(*entry.get(), r_fmt);
         }
     } else {
         for (const auto &[entry, fmt] : boot.ramdisk_table_entries) {
